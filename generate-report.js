@@ -208,7 +208,7 @@ function generateChartHTML(title, chartConfig, width = 1200, height = 800) {
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: white;
-            padding: 40px;
+            padding: 50px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -217,14 +217,14 @@ function generateChartHTML(title, chartConfig, width = 1200, height = 800) {
         }
         .chart-wrapper {
             background: white;
-            padding: 30px;
+            padding: 40px;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             width: 100%;
             max-width: ${width}px;
         }
         .chart-title {
-            font-size: 1.8em;
+            font-size: 2.2em;
             font-weight: 600;
             color: #333;
             margin-bottom: 30px;
@@ -234,8 +234,14 @@ function generateChartHTML(title, chartConfig, width = 1200, height = 800) {
         }
         .chart-container {
             position: relative;
-            height: ${height}px;
+            height: ${Math.floor(height * 0.6)}px;
             width: 100%;
+            margin-bottom: 20px;
+        }
+        .legend-container {
+            min-height: ${Math.floor(height * 0.4)}px;
+            width: 100%;
+            padding: 20px 0;
         }
         canvas {
             max-width: 100%;
@@ -249,6 +255,7 @@ function generateChartHTML(title, chartConfig, width = 1200, height = 800) {
         <div class="chart-container">
             <canvas id="chart"></canvas>
         </div>
+        <div class="legend-container" id="legend-container"></div>
     </div>
     <script>
         Chart.register(ChartDataLabels);
@@ -460,22 +467,40 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
-              position: 'bottom'
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                boxWidth: 30,
+                boxHeight: 20
+              }
             },
             datalabels: {
               color: '#fff',
               font: {
                 weight: 'bold',
-                size: 14
+                size: 20
               },
+              padding: 6,
               formatter: (value, ctx) => {
                 const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
                 const percentage = ((value / total) * 100).toFixed(1);
                 return value + ' (' + percentage + '%)';
               }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -500,22 +525,40 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
-              position: 'bottom'
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                boxWidth: 30,
+                boxHeight: 20
+              }
             },
             datalabels: {
               color: '#fff',
               font: {
                 weight: 'bold',
-                size: 14
+                size: 20
               },
+              padding: 6,
               formatter: (value, ctx) => {
                 const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
                 const percentage = ((value / total) * 100).toFixed(1);
                 return value + ' (' + percentage + '%)';
               }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -538,7 +581,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           indexAxis: 'y',
           plugins: {
             legend: {
@@ -550,16 +593,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             x: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -582,7 +656,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               display: false
@@ -593,16 +667,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             y: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            x: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -625,7 +730,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           indexAxis: 'y',
           plugins: {
             legend: {
@@ -637,16 +742,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             x: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -669,7 +805,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               display: false
@@ -680,16 +816,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             y: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            x: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -712,7 +879,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               display: false
@@ -723,16 +890,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             y: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            x: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -755,7 +953,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               display: false
@@ -766,16 +964,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             y: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            x: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -797,22 +1026,40 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
-              position: 'bottom'
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                boxWidth: 30,
+                boxHeight: 20
+              }
             },
             datalabels: {
               color: '#fff',
               font: {
                 weight: 'bold',
-                size: 14
+                size: 20
               },
+              padding: 6,
               formatter: (value, ctx) => {
                 const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
                 const percentage = ((value / total) * 100).toFixed(1);
                 return value + ' (' + percentage + '%)';
               }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -839,7 +1086,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           indexAxis: 'y',
           plugins: {
             legend: {
@@ -851,16 +1098,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             x: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -887,7 +1165,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           indexAxis: 'y',
           plugins: {
             legend: {
@@ -899,16 +1177,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             x: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -937,7 +1246,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           indexAxis: 'y',
           plugins: {
             legend: {
@@ -949,16 +1258,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             x: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -983,22 +1323,40 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
-              position: 'bottom'
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                boxWidth: 30,
+                boxHeight: 20
+              }
             },
             datalabels: {
               color: '#fff',
               font: {
                 weight: 'bold',
-                size: 14
+                size: 20
               },
+              padding: 6,
               formatter: (value, ctx) => {
                 const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
                 const percentage = ((value / total) * 100).toFixed(1);
                 return value + ' (' + percentage + '%)';
               }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -1025,7 +1383,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           indexAxis: 'y',
           plugins: {
             legend: {
@@ -1037,16 +1395,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             x: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
@@ -1081,7 +1470,7 @@ function prepareCharts(processedData) {
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               display: false
@@ -1092,16 +1481,47 @@ function prepareCharts(processedData) {
               color: '#333',
               font: {
                 weight: 'bold',
-                size: 12
-              }
+                size: 18
+              },
+              padding: 4
             }
           },
           scales: {
             y: {
               beginAtZero: true,
               ticks: {
-                stepSize: 1
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
               }
+            },
+            x: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
             }
           }
         }
