@@ -1,0 +1,17 @@
+{
+  "name": "tenable-reports",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate": "node generate-report.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Generate graphs from Tenable vulnerability findings",
+  "dependencies": {
+    "puppeteer": "^24.32.1"
+  }
+}
