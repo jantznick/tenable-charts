@@ -53,7 +53,14 @@ function processData(findings) {
       nist: 0,
       disa_stig: 0
     },
-    cvssSeverityCounts: { None: 0, Low: 0, Medium: 0, High: 0, Critical: 0 }
+    cvssSeverityCounts: { None: 0, Low: 0, Medium: 0, High: 0, Critical: 0 },
+    assetSeverityBreakdown: {},
+    assetExposure: { Public: 0, Private: 0 },
+    assetSourceCounts: {},
+    externalExposureCounts: {},
+    assetVprScores: {},
+    criticalHighByAsset: {},
+    findingsByMonth: {}
   };
 
   // OWASP 2021 mapping
@@ -184,13 +191,65 @@ function processData(findings) {
         }
       });
     }
+
+    // High-level asset reporting (reusing assetName and severity from above)
+    // Asset severity breakdown
+    if (!data.assetSeverityBreakdown[assetName]) {
+      data.assetSeverityBreakdown[assetName] = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
+    }
+    data.assetSeverityBreakdown[assetName][severity]++;
+
+    // Critical/High by asset
+    if (severity >= 3) {
+      data.criticalHighByAsset[assetName] = (data.criticalHighByAsset[assetName] || 0) + 1;
+    }
+
+    // Asset VPR scores (for average calculation)
+    if (finding.vpr) {
+      if (!data.assetVprScores[assetName]) {
+        data.assetVprScores[assetName] = [];
+      }
+      data.assetVprScores[assetName].push(finding.vpr);
+    }
+
+    // Asset exposure (Public vs Private)
+    if (finding.asset?.tags) {
+      const publicTag = finding.asset.tags.find(t => t.category === 'Public');
+      if (publicTag) {
+        if (publicTag.value === 'TRUE') {
+          data.assetExposure.Public++;
+        } else {
+          data.assetExposure.Private++;
+        }
+      }
+
+      // Asset source
+      const sourceTag = finding.asset.tags.find(t => t.category === 'Asset Source');
+      if (sourceTag && sourceTag.value) {
+        data.assetSourceCounts[sourceTag.value] = (data.assetSourceCounts[sourceTag.value] || 0) + 1;
+      }
+
+      // External exposure
+      const externalTag = finding.asset.tags.find(t => t.category === 'External Exposure');
+      if (externalTag) {
+        const exposure = externalTag.value === 'TRUE' ? 'Exposed' : 'Internal';
+        data.externalExposureCounts[exposure] = (data.externalExposureCounts[exposure] || 0) + 1;
+      }
+    }
+
+    // Findings by month
+    if (finding.first_observed) {
+      const date = new Date(finding.first_observed);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      data.findingsByMonth[monthKey] = (data.findingsByMonth[monthKey] || 0) + 1;
+    }
   });
 
   return data;
 }
 
 // Generate HTML for a single chart
-function generateChartHTML(title, chartConfig, width = 1200, height = 800) {
+function generateChartHTML(title, chartConfig, width = 1400, height = 1200) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -637,7 +696,7 @@ function prepareCharts(processedData) {
             }
           }
         }
-      }, 1400, 600)
+      }, 1400, 1000)
     },
     {
       filename: '05-vulnerabilities-by-family.png',
@@ -711,7 +770,7 @@ function prepareCharts(processedData) {
             }
           }
         }
-      }, 1400, Math.max(400, families.length * 40))
+      }, 1400, Math.max(800, families.length * 60))
     },
     {
       filename: '06-top-10-assets.png',
@@ -786,7 +845,7 @@ function prepareCharts(processedData) {
             }
           }
         }
-      }, 1400, 600)
+      }, 1400, 1000)
     },
     {
       filename: '07-vpr-score-distribution.png',
@@ -1142,7 +1201,7 @@ function prepareCharts(processedData) {
             }
           }
         }
-      }, 1400, Math.max(400, Object.keys(processedData.owasp2021).length * 50))
+      }, 1400, Math.max(800, Object.keys(processedData.owasp2021).length * 70))
     },
     {
       filename: '12-owasp-top-10-2017.png',
@@ -1221,7 +1280,7 @@ function prepareCharts(processedData) {
             }
           }
         }
-      }, 1400, Math.max(400, Object.keys(processedData.owasp2017).length * 50))
+      }, 1400, Math.max(800, Object.keys(processedData.owasp2017).length * 70))
     },
     {
       filename: '13-cwe-distribution.png',
@@ -1302,7 +1361,7 @@ function prepareCharts(processedData) {
             }
           }
         }
-      }, 1400, 600)
+      }, 1400, 1000)
     },
     {
       filename: '14-risk-modification-status.png',
@@ -1439,7 +1498,7 @@ function prepareCharts(processedData) {
             }
           }
         }
-      }, 1400, Math.max(400, Object.keys(processedData.wascCounts).length * 40))
+      }, 1400, Math.max(800, Object.keys(processedData.wascCounts).length * 60))
     },
     {
       filename: '16-compliance-frameworks.png',
@@ -1526,6 +1585,661 @@ function prepareCharts(processedData) {
           }
         }
       })
+    },
+    {
+      filename: '17-top-10-assets-by-findings.png',
+      title: 'Top 10 Assets by Total Findings',
+      html: generateChartHTML('Top 10 Assets by Total Findings', {
+        type: 'bar',
+        data: {
+          labels: Object.entries(processedData.assetCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([name]) => name.length > 40 ? name.substring(0, 40) + '...' : name),
+          datasets: [
+            {
+              label: 'Critical',
+              data: Object.entries(processedData.assetCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([name]) => processedData.assetSeverityBreakdown[name]?.[4] || 0),
+              backgroundColor: 'rgba(220, 53, 69, 0.8)',
+              borderColor: 'rgba(220, 53, 69, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'High',
+              data: Object.entries(processedData.assetCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([name]) => processedData.assetSeverityBreakdown[name]?.[3] || 0),
+              backgroundColor: 'rgba(253, 126, 20, 0.8)',
+              borderColor: 'rgba(253, 126, 20, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'Medium',
+              data: Object.entries(processedData.assetCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([name]) => processedData.assetSeverityBreakdown[name]?.[2] || 0),
+              backgroundColor: 'rgba(255, 193, 7, 0.8)',
+              borderColor: 'rgba(255, 193, 7, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'Low',
+              data: Object.entries(processedData.assetCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([name]) => processedData.assetSeverityBreakdown[name]?.[1] || 0),
+              backgroundColor: 'rgba(40, 167, 69, 0.8)',
+              borderColor: 'rgba(40, 167, 69, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'Info',
+              data: Object.entries(processedData.assetCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([name]) => processedData.assetSeverityBreakdown[name]?.[0] || 0),
+              backgroundColor: 'rgba(23, 162, 184, 0.8)',
+              borderColor: 'rgba(23, 162, 184, 1)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                boxWidth: 30,
+                boxHeight: 20
+              }
+            },
+            datalabels: {
+              display: false
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                text: 'Number of Findings',
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
+              }
+            },
+            y: {
+              stacked: true,
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
+            }
+          }
+        }
+      }, 1400, 1000)
+    },
+    {
+      filename: '18-top-10-assets-critical-high.png',
+      title: 'Top 10 Assets by Critical/High Severity Findings',
+      html: generateChartHTML('Top 10 Assets by Critical/High Severity Findings', {
+        type: 'bar',
+        data: {
+          labels: Object.entries(processedData.criticalHighByAsset)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([name]) => name.length > 50 ? name.substring(0, 50) + '...' : name),
+          datasets: [{
+            label: 'Critical/High Findings',
+            data: Object.entries(processedData.criticalHighByAsset)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 10)
+              .map(([, count]) => count),
+            backgroundColor: 'rgba(220, 53, 69, 0.8)',
+            borderColor: 'rgba(220, 53, 69, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: {
+              display: false
+            },
+            datalabels: {
+              anchor: 'end',
+              align: 'end',
+              color: '#333',
+              font: {
+                weight: 'bold',
+                size: 18
+              },
+              padding: 4
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                text: 'Critical/High Findings',
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
+              }
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
+            }
+          }
+        }
+      }, 1400, 1000)
+    },
+    {
+      filename: '19-asset-exposure-analysis.png',
+      title: 'Asset Exposure Analysis (Public vs Private)',
+      html: generateChartHTML('Asset Exposure Analysis (Public vs Private)', {
+        type: 'doughnut',
+        data: {
+          labels: ['Public', 'Private'],
+          datasets: [{
+            data: [
+              processedData.assetExposure.Public || 0,
+              processedData.assetExposure.Private || 0
+            ],
+            backgroundColor: ['rgba(220, 53, 69, 0.8)', 'rgba(40, 167, 69, 0.8)'],
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                boxWidth: 30,
+                boxHeight: 20
+              }
+            },
+            datalabels: {
+              color: '#fff',
+              font: {
+                weight: 'bold',
+                size: 20
+              },
+              padding: 6,
+              formatter: (value, ctx) => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                if (total === 0) return '0';
+                const percentage = ((value / total) * 100).toFixed(1);
+                return value + ' (' + percentage + '%)';
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
+            }
+          }
+        }
+      })
+    },
+    {
+      filename: '20-asset-source-distribution.png',
+      title: 'Findings by Asset Source',
+      html: generateChartHTML('Findings by Asset Source', {
+        type: 'bar',
+        data: {
+          labels: Object.keys(processedData.assetSourceCounts).length > 0
+            ? Object.entries(processedData.assetSourceCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([label]) => label)
+            : ['No Data'],
+          datasets: [{
+            label: 'Findings',
+            data: Object.keys(processedData.assetSourceCounts).length > 0
+              ? Object.entries(processedData.assetSourceCounts)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([, count]) => count)
+              : [0],
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderColor: 'rgba(102, 126, 234, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            datalabels: {
+              anchor: 'end',
+              align: 'end',
+              color: '#333',
+              font: {
+                weight: 'bold',
+                size: 18
+              },
+              padding: 4
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                text: 'Number of Findings',
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
+              }
+            },
+            x: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
+            }
+          }
+        }
+      })
+    },
+    {
+      filename: '20b-findings-by-individual-asset.png',
+      title: 'Findings by Individual Asset',
+      html: generateChartHTML('Findings by Individual Asset', {
+        type: 'pie',
+        data: {
+          labels: Object.entries(processedData.assetCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([name]) => name.length > 40 ? name.substring(0, 40) + '...' : name),
+          datasets: [{
+            data: Object.entries(processedData.assetCounts)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 10)
+              .map(([, count]) => count),
+            backgroundColor: [
+              '#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe',
+              '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0',
+              '#ff6b6b', '#4ecdc4', '#45b7d1', '#f7b731', '#5f27cd'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 15,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                boxWidth: 25,
+                boxHeight: 18
+              }
+            },
+            datalabels: {
+              color: '#fff',
+              font: {
+                weight: 'bold',
+                size: 18
+              },
+              padding: 5,
+              formatter: (value, ctx) => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                if (total === 0) return '0';
+                const percentage = ((value / total) * 100).toFixed(1);
+                return value + ' (' + percentage + '%)';
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
+            }
+          }
+        }
+      })
+    },
+    {
+      filename: '21-external-exposure-analysis.png',
+      title: 'External Exposure Analysis',
+      html: generateChartHTML('External Exposure Analysis', {
+        type: 'pie',
+        data: {
+          labels: Object.keys(processedData.externalExposureCounts).length > 0 
+            ? Object.keys(processedData.externalExposureCounts)
+            : ['No Data'],
+          datasets: [{
+            data: Object.keys(processedData.externalExposureCounts).length > 0
+              ? Object.values(processedData.externalExposureCounts)
+              : [0],
+            backgroundColor: ['rgba(220, 53, 69, 0.8)', 'rgba(40, 167, 69, 0.8)'],
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                boxWidth: 30,
+                boxHeight: 20
+              }
+            },
+            datalabels: {
+              color: '#fff',
+              font: {
+                weight: 'bold',
+                size: 20
+              },
+              padding: 6,
+              formatter: (value, ctx) => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                if (total === 0) return '0';
+                const percentage = ((value / total) * 100).toFixed(1);
+                return value + ' (' + percentage + '%)';
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
+            }
+          }
+        }
+      })
+    },
+    {
+      filename: '22-top-10-assets-by-vpr.png',
+      title: 'Top 10 Assets by Average VPR Score',
+      html: generateChartHTML('Top 10 Assets by Average VPR Score', {
+        type: 'bar',
+        data: {
+          labels: Object.entries(processedData.assetVprScores)
+            .map(([name, scores]) => [name, scores.reduce((a, b) => a + b, 0) / scores.length])
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([name]) => name.length > 50 ? name.substring(0, 50) + '...' : name),
+          datasets: [{
+            label: 'Average VPR Score',
+            data: Object.entries(processedData.assetVprScores)
+              .map(([name, scores]) => [name, scores.reduce((a, b) => a + b, 0) / scores.length])
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 10)
+              .map(([, avg]) => parseFloat(avg.toFixed(2))),
+            backgroundColor: 'rgba(79, 172, 254, 0.8)',
+            borderColor: 'rgba(79, 172, 254, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: {
+              display: false
+            },
+            datalabels: {
+              anchor: 'end',
+              align: 'end',
+              color: '#333',
+              font: {
+                weight: 'bold',
+                size: 18
+              },
+              padding: 4,
+              formatter: (value) => value.toFixed(2)
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              max: 10,
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                text: 'Average VPR Score',
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
+              }
+            },
+            y: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
+            }
+          }
+        }
+      }, 1400, 1000)
+    },
+    {
+      filename: '23-findings-over-time.png',
+      title: 'Findings Over Time (by Month)',
+      html: generateChartHTML('Findings Over Time (by Month)', {
+        type: 'line',
+        data: {
+          labels: Object.keys(processedData.findingsByMonth).length > 0
+            ? Object.keys(processedData.findingsByMonth).sort()
+            : ['No Data'],
+          datasets: [{
+            label: 'Findings',
+            data: Object.keys(processedData.findingsByMonth).length > 0
+              ? Object.keys(processedData.findingsByMonth)
+                  .sort()
+                  .map(month => processedData.findingsByMonth[month])
+              : [0],
+            borderColor: 'rgba(102, 126, 234, 1)',
+            backgroundColor: 'rgba(102, 126, 234, 0.2)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#333',
+              font: {
+                weight: 'bold',
+                size: 16
+              },
+              padding: 4
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1,
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                text: 'Number of Findings',
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
+              }
+            },
+            x: {
+              ticks: {
+                font: {
+                  size: 16,
+                  weight: 'bold'
+                },
+                padding: 10
+              },
+              title: {
+                display: true,
+                text: 'Month',
+                font: {
+                  size: 18,
+                  weight: 'bold'
+                },
+                padding: 15
+              }
+            }
+          },
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20,
+              left: 20,
+              right: 20
+            }
+          }
+        }
+      })
     }
   ];
 }
@@ -1540,7 +2254,7 @@ async function generateChartImage(browser, chart, outputDir) {
     fs.writeFileSync(tempHtmlPath, chart.html);
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setViewport({ width: 1920, height: 2400 });
 
     await page.goto(`file://${tempHtmlPath}`, {
       waitUntil: 'networkidle0'
