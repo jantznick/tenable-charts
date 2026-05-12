@@ -1,0 +1,15 @@
+[
+  {
+    "slideTitle": "Top 10 assets by vulnerability count",
+    "slideImage": "./charts/06-top-10-assets.png",
+    "slideInsights": [
+      "First insight about what the chart implies for remediation.",
+      "Second insight comparing exposure or trend to a prior period.",
+      "Third insight calling out owners or next steps."
+    ]
+  },
+  {
+    "slideTitle": "Same chart, default placeholder bullets",
+    "slideImage": "./charts/06-top-10-assets.png"
+  }
+]
