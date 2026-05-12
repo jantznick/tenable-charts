@@ -603,14 +603,14 @@ function generateChartHTML(title, chartConfig, width = 1400, height = 1200, layo
             align-items: center;
             justify-content: flex-start;
             min-height: 0;
-            width: fit-content;
             margin: 0 auto;
         }
         .chart-wrapper {
             background: white;
             padding: ${wrapperPadding};
-            width: 100%;
+            width: ${width}px;
             max-width: ${width}px;
+            box-sizing: border-box;
         }
         .chart-title {
             font-size: 2.2em;
@@ -649,11 +649,120 @@ function generateChartHTML(title, chartConfig, width = 1400, height = 1200, layo
 </html>`;
 }
 
+/**
+ * Pixel budget for horizontal bar chart: full hostnames (no ellipsis), no left clip.
+ * leftPad is Chart.js layout padding; outer width must leave room for bars + value axis + datalabels.
+ */
+function buildTopAssetsChartLayout(topAssets) {
+  const labels = topAssets.map((a) => a[0]);
+  const counts = topAssets.map((a) => a[1]);
+  const maxLabelLen = labels.reduce((m, s) => Math.max(m, String(s).length), 0);
+  const maxCount = counts.length ? Math.max(...counts) : 0;
+  const rightPad = Math.max(48, Math.round(16 + String(maxCount).length * 16));
+  const wrapperCssHorizontal = 36;
+  const outerW = Math.min(
+    2000,
+    Math.max(820, Math.round(520 + maxLabelLen * 10.8 + rightPad + wrapperCssHorizontal))
+  );
+
+  return { labels, counts, rightPad, outerW };
+}
+
+function buildTopAssetsChartConfig(layout) {
+  const { labels, counts, rightPad } = layout;
+
+  return {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Vulnerability Count',
+          data: counts,
+          backgroundColor: 'rgba(240, 147, 251, 0.8)',
+          borderColor: 'rgba(240, 147, 251, 1)',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      clip: false,
+      animation: {
+        duration: 0
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        datalabels: {
+          anchor: 'end',
+          align: 'end',
+          color: '#333',
+          clip: false,
+          font: {
+            weight: 'bold',
+            size: 18
+          },
+          padding: 6,
+          offset: 2
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            maxRotation: 0,
+            minRotation: 0,
+            font: {
+              size: 16,
+              weight: 'bold'
+            },
+            padding: 10
+          },
+          title: {
+            display: true,
+            font: {
+              size: 18,
+              weight: 'bold'
+            },
+            padding: 12
+          }
+        },
+        y: {
+          ticks: {
+            autoSkip: false,
+            font: {
+              size: 16,
+              weight: 'bold'
+            },
+            padding: 4
+          }
+        }
+      },
+      layout: {
+        padding: {
+          top: 12,
+          bottom: 18,
+          left: 8,
+          right: rightPad
+        }
+      }
+    }
+  };
+}
+
 // Prepare chart export (top assets / chart 6 only)
 function prepareCharts(processedData) {
   const topAssets = Object.entries(processedData.assetCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10);
+
+  const barRows = Math.min(topAssets.length, 10);
+  const layout = buildTopAssetsChartLayout(topAssets);
 
   return [
     {
@@ -661,83 +770,11 @@ function prepareCharts(processedData) {
       title: 'Top 10 Assets by Vulnerability Count',
       html: generateChartHTML(
         'Top 10 Assets by Vulnerability Count',
-        {
-          type: 'bar',
-          data: {
-            labels: topAssets.map((a) => a[0]),
-            datasets: [
-              {
-                label: 'Vulnerability Count',
-                data: topAssets.map((a) => a[1]),
-                backgroundColor: 'rgba(240, 147, 251, 0.8)',
-                borderColor: 'rgba(240, 147, 251, 1)',
-                borderWidth: 1
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            plugins: {
-              legend: {
-                display: false
-              },
-              datalabels: {
-                anchor: 'end',
-                align: 'end',
-                color: '#333',
-                font: {
-                  weight: 'bold',
-                  size: 18
-                },
-                padding: 4
-              }
-            },
-            scales: {
-              x: {
-                beginAtZero: true,
-                ticks: {
-                  stepSize: 1,
-                  font: {
-                    size: 16,
-                    weight: 'bold'
-                  },
-                  padding: 10
-                },
-                title: {
-                  display: true,
-                  font: {
-                    size: 18,
-                    weight: 'bold'
-                  },
-                  padding: 15
-                }
-              },
-              y: {
-                ticks: {
-                  font: {
-                    size: 16,
-                    weight: 'bold'
-                  },
-                  padding: 10
-                }
-              }
-            },
-            layout: {
-              padding: {
-                top: 20,
-                bottom: 20,
-                left: 20,
-                right: 20
-              }
-            }
-          }
-        },
-        1400,
+        buildTopAssetsChartConfig(layout),
+        layout.outerW,
         1000,
         {
-          chartContainerHeightPx: Math.max(200, 96 + Math.min(topAssets.length, 10) * 52),
+          chartContainerHeightPx: Math.max(200, 64 + barRows * 46),
           omitTitle: true
         }
       )
