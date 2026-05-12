@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate": "node generate-report.js"
+    "generate": "node generate-report.js",
+    "build:slides": "node build-slides.js"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +14,7 @@
   "description": "Generate graphs from Tenable vulnerability findings",
   "dependencies": {
     "dotenv": "^17.4.2",
+    "pptxgenjs": "^4.0.1",
     "puppeteer": "^24.32.1"
   }
 }
